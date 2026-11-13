@@ -31,12 +31,13 @@ public class RedAuto extends LinearOpMode {
     private final Pose start = poseFactory.of(58, 9, 90);
     private final Pose point1 = poseFactory.of(9, 9, 90);
     private final Pose path1Control1 = poseFactory.of(30.913, 29.7624, 0);
-    private final Pose point2 = poseFactory.of(59.1, 132.5, 270);
+    private final Pose point2 = poseFactory.of(59.1, 132.5, -90);
     private final Pose point2Control1 = poseFactory.of(24.3586, 35.9429, 0);
     private final Pose point2Control2 = poseFactory.of(10.8764, 127.6923, 0);
     private final Pose point2Control3 = poseFactory.of(69.0675, 99.0022, 0);
     private final Pose point3 = poseFactory.of(9, 96, 0);
-    private final Pose point3Control1 = poseFactory.of(49.8453, 103.7821, 0);
+    private final Pose point3Control1 = poseFactory.of(68.2832, 116.002, 0);
+    private final Pose point3Control2 = poseFactory.of(22.8322, 81.8766, 0);
 
     public Path path1() {
         return Paths.curve(start, path1Control1, point1).constant(point1);
@@ -45,9 +46,14 @@ public class RedAuto extends LinearOpMode {
     public Path path2() {
         return Paths.curve(point1, point2Control1, point2Control2, point2Control3, point2).linear(point1, point2);
     }
-
+    public Path path2_alt() {
+        return Paths.curve(point1, path1Control1, start).constant(point1);
+    }
     public Path path3() {
-        return Paths.curve(point2, point3Control1, point3).linear(point2, point3);
+        return Paths.curve(point2, point3Control1, point3Control2, point3).linear(point2, point3);
+    }
+    public Path path3_alt() {
+        return  Paths.curve(start, point2Control1, point3).linear(start, point3);
     }
     Command run() {
         return sequential(
@@ -77,7 +83,7 @@ public class RedAuto extends LinearOpMode {
         // INIT
         robot = new Robot(hardwareMap);
         follower = Constants.create(hardwareMap);
-        follower.setPose(poseFactory.of(9, 9, 0));
+        follower.setPose(point1);
         Scheduler.reset();
         telemetry.addData("Status", "Initialized");
         telemetry.update();
@@ -98,6 +104,8 @@ public class RedAuto extends LinearOpMode {
             //ITERATIVE
             follower.update();
             Scheduler.execute();
+            telemetry.addData("position", "x: %.2f y %.2f", follower.pose().x(), follower.pose().y());
+            telemetry.update();
         }
         //DEINIT
     }
