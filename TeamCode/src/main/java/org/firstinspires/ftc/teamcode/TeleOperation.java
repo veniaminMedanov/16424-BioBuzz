@@ -19,18 +19,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
-import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
-import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import com.qualcomm.hardware.bosch.BNO055IMU;
-import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
-import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
-import com.qualcomm.robotcore.util.ElapsedTime;
+import org.firstinspires.ftc.teamcode.Robot;
 
 /**
  * This file contains a minimal example of a Linear "OpMode". An OpMode is a 'program' that runs
@@ -44,40 +34,26 @@ import com.qualcomm.robotcore.util.ElapsedTime;
  */
 @TeleOp
 
-public class BiobuzzDriveTestCode extends LinearOpMode {
-    DcMotorEx frontLeft;
-    DcMotorEx frontRight;
-    DcMotorEx backLeft;
-    DcMotorEx backRight;
-    BNO055IMU imu;
+public class TeleOperation extends LinearOpMode {
+    Robot robot;
 
     @Override
     public void runOpMode() {
-
+        robot = new Robot(hardwareMap);
         telemetry.addData("Status", "Initialized");
         telemetry.update();
-
-        frontLeft = hardwareMap.get(DcMotorEx.class,"frontLeft");
-        frontLeft.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
-        frontRight = hardwareMap.get(DcMotorEx.class, "frontRight");
-        frontRight.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
-        backLeft = hardwareMap.get(DcMotorEx.class, "backLeft");
-        backLeft.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
-        backRight = hardwareMap.get(DcMotorEx.class, "backRight");
-        backRight.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
-        imu = hardwareMap.get(BNO055IMU.class, "imu");
-
-        BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
-        parameters.angleUnit = BNO055IMU.AngleUnit.DEGREES;
-        parameters.accelUnit = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC;
-        imu.initialize(parameters);
 
         double forwardPower = 0;
         double strafePower = 0;
         double turnPower = 0;
         double forwardPowerTemp = 0;
         double strafePowerTemp = 0;
+        boolean nectarShooterOn = false;
+        double nectarShooterPower = 1;
+        boolean pollenShooterOn = false;
+        double pollenShooterPower = 1;
 
+        boolean intakeOn = false;
         // Wait for the game to start (driver presses PLAY)
         waitForStart();
 
@@ -91,44 +67,73 @@ public class BiobuzzDriveTestCode extends LinearOpMode {
             telemetry.addData("Status", "Running");
 
             strafePowerTemp = gamepad1.left_stick_x;
-            forwardPowerTemp = gamepad1.left_stick_y;
+            forwardPowerTemp = -gamepad1.left_stick_y;
             turnPower = gamepad1.right_stick_x;
 
-            Orientation angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.RADIANS);
-            double currentHeading = angles.firstAngle;
+            double currentHeading = robot.getHeadingRadians();
 
             strafePower = strafePowerTemp * Math.cos(currentHeading)
                     - forwardPowerTemp * Math.sin(currentHeading);
             forwardPower = forwardPowerTemp * Math.cos(currentHeading)
                     + strafePowerTemp * Math.sin(currentHeading);
 
-            backLeftPower = turnPower + forwardPower - strafePower;
-            backRightPower = 0.0;
-            frontLeftPower = 0.0;
-            frontRightPower = 0.0;
 
-            if(gamepad2.a){
-                backLeftPower = 0;
+            robot.frontLeft.setPower(forwardPower + turnPower - strafePower);
+            robot.frontRight.setPower(forwardPower - turnPower + strafePower);
+            robot.backLeft.setPower(forwardPower + turnPower + strafePower);
+            robot.backRight.setPower(forwardPower - turnPower - strafePower);
+
+            if (gamepad1.dpad_left) {
+                if (nectarShooterPower > 0) {
+                    nectarShooterPower -= 0.01;
+                }
+            }
+            if (gamepad1.dpad_right) {
+                if (nectarShooterPower < 1) {
+                    nectarShooterPower += 0.01;
+                }
+            }
+            if (gamepad1.dpad_down) {
+                if (pollenShooterPower > 0) {
+                    pollenShooterPower -= 0.01;
+                }
+            }
+            if (gamepad1.dpad_up) {
+                if (pollenShooterPower < 1) {
+                    pollenShooterPower += 0.01;
+                }
             }
 
+            if (gamepad1.leftBumperWasPressed()) {
+                nectarShooterOn = !nectarShooterOn;
+                pollenShooterOn = !pollenShooterOn;
+            }
 
-            backLeft.setPower(backLeftPower);
-            backRight.setPower(turnPower - forwardPower - strafePower);
-            frontRight.setPower(turnPower - forwardPower + strafePower);
-            frontLeft.setPower(turnPower + forwardPower + strafePower);
+            if (gamepad1.rightBumperWasPressed()) {
+                intakeOn = !intakeOn;
+            }
 
+//            if (gamepad1.aWasPressed()) {
+//                indexerOn = !indexerOn;
+//                robot.setIndexerOpen(indexerOn);
+//            }
+
+            robot.setPollenPower((pollenShooterOn ? 1 : 0) * pollenShooterPower);
+            robot.setNectarPower((nectarShooterOn ? 1 : 0) * nectarShooterPower);
+            robot.setIntakePower(intakeOn ? 1 : 0);
 
             telemetry.addData("forwardSpeed", forwardPower);
             telemetry.addData("strafeSpeed", strafePower);
-            telemetry.addData("frontLeftSpeed",frontLeft.getVelocity());
-            telemetry.addData("frontRightSpeed",frontRight.getVelocity());
-            telemetry.addData("backLeftSpeed",backLeft.getVelocity());
-            telemetry.addData("backRightSpeed",backRight.getVelocity());
+            telemetry.addData("frontLeftVelocity",robot.frontLeft.getVelocity());
+            telemetry.addData("frontRightVelocity",robot.frontRight.getVelocity());
+            telemetry.addData("backLeftVelocity",robot.backLeft.getVelocity());
+            telemetry.addData("backRightVelocity",robot.backRight.getVelocity());
+            telemetry.addData("pollenShooterPower", pollenShooterPower);
+            telemetry.addData("pollenShooterVelocity", robot.getPollenVelocity());
+            telemetry.addData("nectarShooterPower", nectarShooterPower);
+            telemetry.addData("nectarShooterVelocity", robot.getNectarVelocity());
+            telemetry.addData("intakeVelocity", robot.getIntakeVelocity());
             telemetry.update();
-
-
         }
     }
-
-
 }
