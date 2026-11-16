@@ -36,7 +36,8 @@ import com.qualcomm.robotcore.hardware.Servo;
 
 public class motor extends LinearOpMode {
     Servo indexerLeft;
-    double indexerPos = 0.75;
+    double indexerLeftPos = 0;
+    double indexerRightPos = 0;
     Servo indexerRight;
     @Override
     public void runOpMode() {
@@ -48,21 +49,27 @@ public class motor extends LinearOpMode {
         telemetry.update();
         // Wait for the game to start (driver presses PLAY)
         waitForStart();
-        indexerLeft.setPosition(indexerPos);
-        indexerRight.setPosition(indexerPos);
+        indexerLeft.setPosition(indexerLeftPos);
+        indexerRight.setPosition(indexerRightPos);
 
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
-            if (gamepad1.dpad_up) {
-                    indexerPos += 0.01;
-                    indexerLeft.setPosition(indexerPos);
-                    indexerRight.setPosition(indexerPos);
-            } else if (gamepad1.dpad_down) {
-                    indexerPos -= 0.01;
-                    indexerLeft.setPosition(indexerPos);
-                    indexerRight.setPosition(indexerPos);
+            if (gamepad1.dpadUpWasPressed()) {
+                    indexerRightPos += 0.05;
+                    indexerRight.setPosition(indexerRightPos);
+            } else if (gamepad1.dpadDownWasPressed()) {
+                    indexerRightPos -= 0.05;
+                    indexerRight.setPosition(indexerRightPos);
             }
-            telemetry.addData("indexer left pos", indexerPos);
+            if (gamepad1.dpadRightWasPressed()) {
+                indexerLeftPos += 0.05;
+                indexerLeft.setPosition(indexerLeftPos);
+            } else if (gamepad1.dpadLeftWasPressed()) {
+                indexerLeftPos -= 0.05;
+                indexerLeft.setPosition(indexerLeftPos);
+            }
+            telemetry.addData("indexer left pos", indexerLeft.getPosition());
+            telemetry.addData("indexerright pos", indexerRight.getPosition());
             telemetry.update();
       }
     }

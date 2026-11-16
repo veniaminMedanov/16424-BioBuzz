@@ -18,8 +18,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 */
 package org.firstinspires.ftc.teamcode;
 
+import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
+import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.IMU;
+
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.teamcode.Robot;
 
 /**
@@ -37,9 +43,19 @@ import org.firstinspires.ftc.teamcode.Robot;
 public class TeleOperation extends LinearOpMode {
     Robot robot;
 
+    static IMU.Parameters parameters = new IMU.Parameters(new RevHubOrientationOnRobot(RevHubOrientationOnRobot.LogoFacingDirection.FORWARD, RevHubOrientationOnRobot.UsbFacingDirection.RIGHT));
+
     @Override
     public void runOpMode() {
         robot = new Robot(hardwareMap);
+
+        IMU imu;
+        GoBildaPinpointDriver odo;
+        imu = hardwareMap.get(IMU.class, "imu");
+        imu.initialize(parameters);
+        odo = hardwareMap.get(GoBildaPinpointDriver.class,"pinpoint");
+        odo.resetPosAndIMU();
+
         telemetry.addData("Status", "Initialized");
         telemetry.update();
 
@@ -49,9 +65,11 @@ public class TeleOperation extends LinearOpMode {
         double forwardPowerTemp = 0;
         double strafePowerTemp = 0;
         boolean nectarShooterOn = false;
-        double nectarShooterPower = 1;
+        double nectarShooterPower = 0.4;
         boolean pollenShooterOn = false;
-        double pollenShooterPower = 1;
+        double pollenShooterPower = 0.4;
+        boolean intakeOverride = false;
+        boolean indexerOn = false;
 
         boolean intakeOn = false;
         // Wait for the game to start (driver presses PLAY)
@@ -61,16 +79,23 @@ public class TeleOperation extends LinearOpMode {
         double backRightPower = 0.0;
         double frontLeftPower = 0.0;
         double frontRightPower = 0.0;
+        Pose2D currentPos;
+
+        //IMU
+        imu = hardwareMap.get(IMU.class, "imu");
+        imu.initialize(parameters);
 
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
+            odo.update();;
+            currentPos = odo.getPosition();
             telemetry.addData("Status", "Running");
 
             strafePowerTemp = gamepad1.left_stick_x;
-            forwardPowerTemp = -gamepad1.left_stick_y;
+            forwardPowerTemp = gamepad1.left_stick_y;
             turnPower = gamepad1.right_stick_x;
 
-            double currentHeading = robot.getHeadingRadians();
+            double currentHeading = odo.getHeading(AngleUnit.RADIANS);
 
             strafePower = strafePowerTemp * Math.cos(currentHeading)
                     - forwardPowerTemp * Math.sin(currentHeading);
@@ -83,24 +108,24 @@ public class TeleOperation extends LinearOpMode {
             robot.backLeft.setPower(forwardPower + turnPower + strafePower);
             robot.backRight.setPower(forwardPower - turnPower - strafePower);
 
-            if (gamepad1.dpad_left) {
+            if (gamepad1.dpadLeftWasPressed()) {
                 if (nectarShooterPower > 0) {
-                    nectarShooterPower -= 0.01;
+                    nectarShooterPower -= 0.05;
                 }
             }
-            if (gamepad1.dpad_right) {
+            if (gamepad1.dpadRightWasPressed()) {
                 if (nectarShooterPower < 1) {
-                    nectarShooterPower += 0.01;
+                    nectarShooterPower += 0.05;
                 }
             }
-            if (gamepad1.dpad_down) {
+            if (gamepad1.dpadDownWasPressed()) {
                 if (pollenShooterPower > 0) {
-                    pollenShooterPower -= 0.01;
+                    pollenShooterPower -= 0.05;
                 }
             }
-            if (gamepad1.dpad_up) {
+            if (gamepad1.dpadUpWasPressed()) {
                 if (pollenShooterPower < 1) {
-                    pollenShooterPower += 0.01;
+                    pollenShooterPower += 0.05;
                 }
             }
 
@@ -113,17 +138,25 @@ public class TeleOperation extends LinearOpMode {
                 intakeOn = !intakeOn;
             }
 
-//            if (gamepad1.aWasPressed()) {
-//                indexerOn = !indexerOn;
-//                robot.setIndexerOpen(indexerOn);
-//            }
+            if (gamepad1.aWasPressed()) {
+                indexerOn = !indexerOn;
+                robot.setIndexerOpen(indexerOn);
+            }
 
             robot.setPollenPower((pollenShooterOn ? 1 : 0) * pollenShooterPower);
             robot.setNectarPower((nectarShooterOn ? 1 : 0) * nectarShooterPower);
-            robot.setIntakePower(intakeOn ? 1 : 0);
+            double intake = 0;
+            if (gamepad2.a) {
+                intake = -1;
+            } else {
+                intake = (intakeOn ? 1 : 0);
+            }
+            robot.setIntakePower(intake);
 
             telemetry.addData("forwardSpeed", forwardPower);
             telemetry.addData("strafeSpeed", strafePower);
+            telemetry.addData("heading", imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS));
+            telemetry.addData("pinpointHeading",odo.getHeading(AngleUnit.RADIANS));
             telemetry.addData("frontLeftVelocity",robot.frontLeft.getVelocity());
             telemetry.addData("frontRightVelocity",robot.frontRight.getVelocity());
             telemetry.addData("backLeftVelocity",robot.backLeft.getVelocity());
