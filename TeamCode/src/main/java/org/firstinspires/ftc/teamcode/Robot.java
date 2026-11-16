@@ -19,7 +19,6 @@ public class Robot {
     DcMotorEx intake;
     Servo leftIndexer;
     Servo rightIndexer;
-    IMU imu;
 
     void setPollenPower(double power) {
         pollenShooter.setPower(power);
@@ -49,15 +48,15 @@ public class Robot {
         return pollenShooter.getVelocity();
     }
     void setIndexerOpen(boolean open) {
-        leftIndexer.setPosition(open ? 0.625 : 0.75);
-        rightIndexer.setPosition(open ? 0.625 : 0.75);
+        leftIndexer.setPosition(open ? 0.1 : 0.35);
+        rightIndexer.setPosition(open ? 0.1 : 0.35);
     }
     double getIndexerPos() {
         return leftIndexer.getPosition();
     }
-    double getHeadingRadians() {
-        return imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
-    }
+//    double getHeadingRadians() {
+//        return imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
+//    }
 
     Robot(HardwareMap hardwareMap) {
         //Drivetrain
@@ -91,7 +90,7 @@ public class Robot {
 
         intake.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
-        intake.setDirection(DcMotorSimple.Direction.REVERSE);
+        intake.setDirection(DcMotorSimple.Direction.FORWARD);
 
         //Indexers
         leftIndexer = hardwareMap.get(Servo.class, "indexerLeft");
@@ -100,9 +99,5 @@ public class Robot {
         leftIndexer.setDirection(Servo.Direction.FORWARD);
         rightIndexer.setDirection(Servo.Direction.REVERSE);
 
-        //IMU
-        imu = hardwareMap.get(IMU.class, "imu");
-        IMU.Parameters parameters = new IMU.Parameters(new RevHubOrientationOnRobot(RevHubOrientationOnRobot.LogoFacingDirection.FORWARD, RevHubOrientationOnRobot.UsbFacingDirection.UP));
-        imu.initialize(parameters);
     }
 }
